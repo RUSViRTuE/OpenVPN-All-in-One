@@ -1,6 +1,7 @@
 @echo off
 setlocal enableextensions enabledelayedexpansion
-TITLE OpenVPN-All-in-One by RUSViRTuE v1.0.2 [26.12.2022]
+mode con:cols=120
+TITLE OpenVPN-All-in-One by RUSViRTuE v1.0.3 [27.12.2022]
 :START
 :: -------------VARS--------------
 :: Заполните значения переменных
@@ -168,12 +169,14 @@ IF %act% == 10 (
 "!system32dir!\reg.exe" query "HKU\S-1-5-19">nul 2>&1
 if %errorlevel% equ 1 goto UACPrompt
 
-IF NOT EXIST "%KEY_DIR%" mkdir "%KEY_DIR%"
-IF NOT EXIST "%KEY_DIR%\index.txt" (
-:: Создание пустого файла index.txt
-echo. 2>"%KEY_DIR%\index.txt"
-:: Создание файла serial с индексом 01
-echo 01>"%KEY_DIR%\serial"
+if exist "%openvpnexe%" (
+	IF NOT EXIST "%KEY_DIR%" mkdir "%KEY_DIR%"
+	IF NOT EXIST "%KEY_DIR%\index.txt" (
+	:: Создание пустого файла index.txt
+	echo. 2>"%KEY_DIR%\index.txt"
+	:: Создание файла serial с индексом 01
+	echo 01>"%KEY_DIR%\serial"
+	)
 )
 goto :EOF
 
@@ -182,22 +185,34 @@ goto :EOF
 mshta "vbscript:CreateObject("Shell.Application").ShellExecute("%~fs0", "", "", "runas", 1) & Close()"
 exit /b
 
+:checkopenvpnexe
+if not exist "%openvpnexe%" (
+	cls
+	CALL :EchoColor 4 "[X] OpenVPN НЕ НАЙДЕН. Проверьте правильность указанного пути в этом скрипте"
+	echo.
+	CALL :EchoColor 4 "    либо переустановите программу"
+	echo.
+	pause
+	goto START
+)
+GoTo :EOF
+
 :OpenVPNver
 if not exist "%openvpnexe%" (
 	CALL :EchoColor 4 "[X] %openvpnexe% [ОТСУТСТВУЕТ]"
 	echo.
-	CALL :EchoColor 4 "Проверьте правильность указания пути в скрипте и наличие файла"
 	echo.
-	CALL :EchoColor 4 "При необходимости переустановите OpenVPN"
+	CALL :EchoColor 4 "ПРОВЕРЬТЕ ПРАВИЛЬНОСТЬ УКАЗАНИЯ ПУТИ В СКРИПТЕ И НАЛИЧИЕ ФАЙЛА"
 	echo.
-	CALL :EchoColor 4 "РАБОТА СКРИПТА БУДЕТ ЗАВЕРШЕНА"
+	CALL :EchoColor 4 "ПРИ НЕОБХОДИМОСТИ ПЕРЕУСТАНОВИТЕ OpenVPN"
 	echo.
-	pause
-	exit
-)
-for /f "tokens=2 delims==" %%a in ('"wmic datafile where name='%openvpnexe:\=\\%' get Version /value|find "^=""') do set "ver=%%a"
-CALL :EchoColor 2 "[V] %openvpnexe% [УСТАНОВЛЕН]	VER.: %ver%"
-echo.
+	echo.
+	)
+if exist "%openvpnexe%" (
+	for /f "tokens=2 delims==" %%a in ('"wmic datafile where name='%openvpnexe:\=\\%' get Version /value|find "^=""') do set "ver=%%a"
+	CALL :EchoColor 2 "[V] %openvpnexe% [УСТАНОВЛЕН]	VER.: !ver!"
+	echo.
+	)
 GOTO :eof
 
 :servicestatus
@@ -234,12 +249,16 @@ echo.
 GOTO :eof
 
 :OpenVPNgui
-TaskList /FI "ImageName EQ %openvpnguiprocess%" | Find /I "%openvpnguiprocess%">nul
-If %ErrorLevel% NEQ 0 (
-	CALL :EchoColor 6 "[-] OpenVPN GUI [НЕ ЗАПУЩЕН]				44 - Перезапустить"
+if exist "%openvpngui%" (
+	TaskList /FI "ImageName EQ %openvpnguiprocess%" | Find /I "%openvpnguiprocess%">nul
+	If %ErrorLevel% NEQ 0 (
+		CALL :EchoColor 6 "[-] OpenVPN GUI [НЕ ЗАПУЩЕН]				44 - Перезапустить"
+		) else (
+		CALL :EchoColor 2 "[V] OpenVPN GUI [ЗАПУЩЕН]				45 - Закрыть; 44 - Перезапустить"
+	)
 	) else (
-	CALL :EchoColor 2 "[V] OpenVPN GUI [ЗАПУЩЕН]				45 - Закрыть; 44 - Перезапустить"
-)
+		CALL :EchoColor 4 "[X] OpenVPN GUI [НЕ УСТАНОВЛЕН]"
+	)
 echo.
 GOTO :eof
 
@@ -357,21 +376,23 @@ sc stop OpenVPNService
 GoTo :EOF
 
 :checkopensslcnf
-if not exist "%KEY_CONFIG%" (
-	CALL :EchoColor 4 "[X] файл openssl-1.0.0.cnf [ОТСУТСТВУЕТ]"
-	echo.
-	echo Создаем файл openssl-1.0.0.cnf
-	call :Createopensslcnf
-)
-if exist "%KEY_CONFIG%" (
-	CALL :EchoColor 2 "[V] файл openssl-1.0.0.cnf [ПРИСУТСТВУЕТ]"
-	echo.
-	) else (
-	CALL :EchoColor 4 "[X] файл openssl-1.0.0.cnf не удалось создать. Работа батника будет завершена"
-	echo.
-	timeout /t 5
-	exit
+if exist "%openvpnexe%" (
+	if not exist "%KEY_CONFIG%" (
+		CALL :EchoColor 4 "[X] файл openssl-1.0.0.cnf [ОТСУТСТВУЕТ]"
+		echo.
+		echo Создаем файл openssl-1.0.0.cnf
+		call :Createopensslcnf
 	)
+	if exist "%KEY_CONFIG%" (
+		CALL :EchoColor 2 "[V] файл openssl-1.0.0.cnf [ПРИСУТСТВУЕТ]"
+		echo.
+		) else (
+		CALL :EchoColor 4 "[X] файл openssl-1.0.0.cnf не удалось создать. Работа батника будет завершена"
+		echo.
+		timeout /t 5
+		exit
+	)
+)
 GoTo :EOF
 
 :: ----------------------------------------
@@ -682,6 +703,7 @@ init = 0
 
 :CheckCAkeyInKeyDir
 cls
+call :checkopenvpnexe
 if exist "%KEY_DIR%\ca.key" (
 	CALL :EchoColor 6 "[ВНИМАНИЕ] В ПАПКЕ %KEY_DIR% уже присутствуют сертификаты"
 	echo.
@@ -738,7 +760,7 @@ if ERRORLEVEL 0 (
 	CALL :EchoColor 2 "[V] ca.crt - корневой сертификат удостоверяющего центра создан [УСПЕШНО]"
 	::CALL :EchoColor 2 "[V] CA certificate succesfully created"
 	echo.
-	)
+)
 echo.
 
 :: Генерация ключа Диффи Хеллмана, позволяющего двум и более сторонам получить общий секретный ключ
@@ -912,7 +934,7 @@ echo f|xcopy /y "%SRV_FILE1%.crt" "%SRV_FILE2%.crt" >nul 2>&1
 echo f|xcopy /y "%KEY_DIR%\ca.crt" "%KEY_DIR%\%SRV_NAME%\ca.crt" >nul 2>&1
 echo f|xcopy /y "%KEY_DIR%\ta.key" "%KEY_DIR%\%SRV_NAME%\ta.key" >nul 2>&1
 echo f|xcopy /y "%KEY_DIR%\dh%KEY_SIZE%.pem" "%KEY_DIR%\%SRV_NAME%\dh%KEY_SIZE%.pem" >nul 2>&1
-echo f|xcopy /y "%SRV_FILE2%.ovpn" "%OpenVPN_DIR%\config\%SRV_NAME%.ovpn" >nul 2>&1
+::echo f|xcopy /y "%SRV_FILE2%.ovpn" "%OpenVPN_DIR%\config\%SRV_NAME%.ovpn" >nul 2>&1
 
 IF NOT EXIST "%OpenVPN_DIR%\config\ccd" mkdir "%OpenVPN_DIR%\config\ccd"
 
@@ -921,6 +943,7 @@ call :backup
 goto START
 
 :CLIENT-CRT
+call :checkopenvpnexe
 echo.
 echo 00  - Вернуться назад
 echo 0   - Выход
@@ -1060,6 +1083,7 @@ goto START
 :REVOKE-CRT
 :: Отзыв сертификата пользователя
 cls
+call :checkopenvpnexe
 Set /p revokeuser="Введите имя сертификата пользователя, который требуется отозвать: "
 if not exist "%KEY_DIR%\%revokeuser%.crt" (
 	CALL :EchoColor 4 "[X] Сертификат %KEY_DIR%\%revokeuser%.crt [НЕ НАЙДЕН]"
@@ -1147,6 +1171,7 @@ pause
 goto START
 
 :backup
+call :checkopenvpnexe
 IF NOT EXIST "%backupfolder%" mkdir "%backupfolder%"
 for /f "delims=." %%i in ('wmic.exe OS get LocalDateTime ^| find "."') do set sDateTime=%%i
 set "Year=%sDateTime:~0,4%"
@@ -1166,6 +1191,7 @@ GoTo :EOF
 
 :CLEAN-ALL
 cls
+call :checkopenvpnexe
 call :StopOpenVPNService
 call :OpenVPNServiceManual
 set "event=before_CLEAN-ALL"
