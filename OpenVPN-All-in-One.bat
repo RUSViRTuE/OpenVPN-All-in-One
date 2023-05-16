@@ -4,7 +4,7 @@
 :: Этот скрипт должен быть сохранен в кодировке windows-1251
 :: =========================================================
 
-@set "TITLE=OpenVPN-All-in-One by RUSViRTuE v1.1.0 [10.01.2023]"
+@set "TITLE=OpenVPN-All-in-One by RUSViRTuE v1.2.0 [17.05.2023]"
 @echo off
 setlocal enableextensions enabledelayedexpansion
 mode con:cols=130
@@ -12,39 +12,14 @@ TITLE %TITLE%
 CALL :InitScript
 :: Полный путь до этого скрипта
 set "ThisFile=%~0"
-:: Полный путь до папки, откуда будет запускаться этот скрипт
-set "ScriptDir=%~dp0"
-:: Убираем конечный бэкслэш \
-set "ScriptDir=%ScriptDir:~0,-1%"
+:: Полный путь до папки, откуда будет запускаться этот скрипт без конечного бэкслэша \
+set "ScriptDir=%~dp0" & set "ScriptDir=%ScriptDir:~0,-1%"
+
 :START
 chcp 1251>nul
 :: ---------------------START USER VARS---------------------
-:: Путь до папки OpenVPN
-set "OpenVPN_DIR=C:\Program Files\OpenVPN"
-:: Папка для хранения всех ключей и сертификатов
-:: При запуске команды clean-all всё, что в этой папке, удалится!
-set "KEY_DIR=%OpenVPN_DIR%\easy-rsa\keys"
-:: Автоматически будет делаться бэкап до и после каждого действия (добавление/удаление/отзыв сертификатов, очистка папки %KEY_DIR%)
-:: Папка, которая будет архивироваться
-set "backupfolderin=%OpenVPN_DIR%"
-:: Папка для хранения бэкапов
-set "backupfolderout=C:\_Backup\OpenVPN"
-:: Имя бэкапа
-set "backupfile=OpenVPN_%Year%-%Month%-%Day%_%Hour%-%Minute%-%Second%_%event%.zip"
-:: IP-адрес сервера. Так же можно указать локальный IP (например, 192.168.1.10) или доменное имя (например, mydomain.com)
+:: Внешний (публичный) IP-адрес сервера. Так же можно указать локальный IP (например, 192.168.1.10) или доменное имя (например, mydomain.com)
 set "IP_SERVER=1.2.3.4"
-:: Порт, на котором будем слушать. По умолчанию 1194
-set "ovpnport=1194"
-:: Протокол передачи данных: tcp или udp. Рекомендуется оставить по умолчанию udp
-:: ВАЖНО! Чувствителен к регистру. Только маленькими буквами допускается
-set ovpn_protocol=udp
-:: Тип шифрования. Не рекомендуется менять
-set "cipher=AES-256-GCM"
-:: Размер ключа в битах для создания файла сертификата и файла Диффи-Хелмана для защиты трафика от расшифровки.
-:: Он понадобится для использования сервером TLS. В некоторых случаях процедура может занять
-:: значительное время (например, при размере ключа 4096 бит занимает десятки минут),
-:: но делается однократно. Рекомендуется значение 2048
-set "KEY_SIZE=2048"
 :: server < network > < mask > - автоматически присваивает адреса всем клиентам (DHCP)
 :: в указанном диапазоне с маской сети. Данная опция заменяет ifconfig и может работать
 :: только с TLS-клиентами в режиме TUN, соответственно использование сертификатов обязательно.
@@ -60,10 +35,34 @@ set "organization=Roga-i-Kopyta"
 :: ----------------------END USER VARS----------------------
 
 :: --------------------START SYSTEM VARS--------------------
+:: Порт, на котором будем слушать. По умолчанию 1194
+set "ovpnport=1194"
+:: Протокол передачи данных: tcp или udp. Рекомендуется оставить по умолчанию udp
+:: ВАЖНО! Чувствителен к регистру. Только маленькими буквами допускается
+set ovpn_protocol=udp
+:: Тип шифрования. Не рекомендуется менять
+set "cipher=AES-256-GCM"
+:: Размер ключа в битах для создания файла сертификата и файла Диффи-Хелмана для защиты трафика от расшифровки.
+:: Он понадобится для использования сервером TLS. В некоторых случаях процедура может занять
+:: значительное время (например, при размере ключа 4096 бит занимает десятки минут),
+:: но делается однократно. Рекомендуется значение 2048
+set "KEY_SIZE=2048"
 :: Показывать (ON) или нет (OFF) по умолчанию список клиентов при создании нового клиента
 :: ЧУВСТВИТЕЛЕН К РЕГИСТРУ!
 :: Можно будет изменить значение в процессе работы скрипта
 set "enableclientlist=ON"
+:: Путь до папки OpenVPN
+set "OpenVPN_DIR=C:\Program Files\OpenVPN"
+:: Папка для хранения всех ключей и сертификатов
+:: При запуске команды clean-all всё, что в этой папке, удалится!
+set "KEY_DIR=%OpenVPN_DIR%\easy-rsa\keys"
+:: Автоматически будет делаться бэкап до и после каждого действия (добавление/удаление/отзыв сертификатов, очистка папки %KEY_DIR%)
+:: Папка, которая будет архивироваться
+set "backupfolderin=%OpenVPN_DIR%"
+:: Папка для хранения бэкапов
+set "backupfolderout=C:\_Backup\OpenVPN"
+:: Имя бэкапа
+set "backupfile=OpenVPN_%Year%-%Month%-%Day%_%Hour%-%Minute%-%Second%_%event%.zip"
 :: Папка, где будут храниться временные файлы работы скрипта
 set "tempdir=%TEMP%"
 set "openvpnbin=%OpenVPN_DIR%\bin"
@@ -211,7 +210,7 @@ IF "%act%" == "10" (
 ) else IF "%act%" == "88" (
  cls
  set "event=add_manual"
- CALL :backup
+ CALL :BACKUP
  GoTo :START
 ) else IF "%act%" == "99" (
  set "cleanall=manual"
@@ -241,13 +240,13 @@ GoTo :EOF
 mshta "vbscript:CreateObject("Shell.Application").ShellExecute("%~fs0", "", "", "runas", 1) & Close()"
 exit /b
 
-:CHECKOPENVPNFILES
+:checkopenvpnfiles
 if not exist "%openvpnexe%" (
 	echo.
 	CALL :EchoColor 4 "[X] %openvpnexe% [ОТСУТСТВУЕТ]"&echo.&echo.
 	CALL :EchoColor 4 "ПРОВЕРЬТЕ ПРАВИЛЬНОСТЬ УКАЗАНИЯ ПУТИ В СКРИПТЕ И НАЛИЧИЕ ФАЙЛА openvpn.exe"&echo.
 	CALL :EchoColor 4 "ПРИ НЕОБХОДИМОСТИ ПЕРЕУСТАНОВИТЕ OpenVPN"&echo.&echo.
-	CALL :CHECKOPENVPNMENU
+	CALL :checkopenvpnmenu
 	echo.&pause&GoTo :START
 ) else (
 	if not exist "%opensslexe%" (
@@ -256,13 +255,13 @@ if not exist "%openvpnexe%" (
 		CALL :EchoColor 4 "ПРОВЕРЬТЕ ПРАВИЛЬНОСТЬ УКАЗАНИЯ ПУТИ В СКРИПТЕ И НАЛИЧИЕ ФАЙЛА openssl.exe"&echo.
 		CALL :EchoColor 4 "ПРИ НЕОБХОДИМОСТИ ПЕРЕУСТАНОВИТЕ OpenVPN И ВО ВРЕМЯ УСТАНОВКИ ВЫБЕРЕТЕ:"&echo.
 		CALL :EchoColor 4 "Customize-EasyRSA 3-Will be installed on local hard drive-Install Now"&echo.&echo.
-		CALL :CHECKOPENVPNMENU
+		CALL :checkopenvpnmenu
 		echo.&pause&GoTo :START
 	))
 CALL :checkopensslcnf
 GoTo :EOF
 
-:CHECKOPENVPNMENU
+:checkopenvpnmenu
 CALL :EchoColor 3 "	ВЫБЕРИТЕ ДЕЙСТВИЕ"&echo.
 echo.
 CALL :EchoColor 0 "    1 - Перейти на сайт https://openvpn.net/community-downloads/"&echo.
@@ -282,12 +281,15 @@ start "" "https://openvpn.net/community-downloads/"
 )
 GoTo :EOF
 
-:CHECKINDEXTXT
+:checkindextxt
 if not exist "%indextxt%" (
 	echo.
-	CALL :EchoColor 4 "[X] Файл %indextxt% [НЕ ОБНАРУЖЕН]"&echo.
-	CALL :EchoColor 4 "[X] Клиенсткие сертификаты [НЕ ОБНАРУЖЕНЫ]"&echo.
-	CALL :EchoColor 4 "    Сначала запустите настройку серверной части"&echo.&echo.&pause&GoTo :START
+	CALL :EchoColor 4 "[X] Файл index.txt [НЕ ОБНАРУЖЕН]"&echo.
+	CALL :EchoColor 4 "    %indextxt%"&echo.
+	echo.
+	CALL :EchoColor 4 "    В файле содержится информация о серверном и клиентских сертификатах."&echo.
+	CALL :EchoColor 4 "    Дальнейшая работа скрипта невозможна."&echo.
+	CALL :EchoColor 4 "    Сначала запустите настройку серверной части OpenVPN."&echo.&echo.&pause&GoTo :START
 )
 GoTo :EOF
 
@@ -801,9 +803,11 @@ init = 0
 
 :CheckKeyDir
 if exist "%KEY_DIR%" FOR /F "usebackq" %%f IN (`Dir "%KEY_DIR%\" /b /A:`) DO (
-	CALL :EchoColor 4 "[ВНИМАНИЕ] В ПАПКЕ %KEY_DIR% уже присутствуют файлы"&echo.
+	CALL :EchoColor 4 "[X] Уже присутствуют файлы в папке:"&echo.
+	CALL :EchoColor 4 "    %KEY_DIR%"&echo.
 	CALL :EchoColor 4 "ДАЛЬНЕЙШАЯ РАБОТА НЕВОЗМОЖНА"&echo.
-	CALL :EchoColor 4 "ТРЕБУЕТСЯ полностью очистить папку %KEY_DIR%"&echo.
+	CALL :EchoColor 4 "ТРЕБУЕТСЯ полностью очистить папку:"&echo.
+	CALL :EchoColor 4 "    %KEY_DIR%"&echo.
 	echo.
 	echo.
 	CALL :EchoColor 3 "	ВЫБЕРИТЕ ДЕЙСТВИЕ"&echo.
@@ -835,7 +839,7 @@ GoTo :EOF
 
 :SERVER_INIT
 cls
-CALL :CHECKOPENVPNFILES
+CALL :checkopenvpnfiles
 cls
 echo.
 if "%ServerType%" == "WindowsPC" CALL :EchoColor 6 "НАСТРОЙКА СЕРВЕРНОЙ ЧАСТИ [WINDOWS PC] (СОЗДАНИЕ ВСЕХ НЕОБХОДИМЫХ КЛЮЧЕЙ И СЕРТИФИКАТОВ)"&echo.
@@ -853,18 +857,33 @@ set "SERVER_NAME="
 set /P "SERVER_NAME="
 echo.
 >"%servername1txt%" echo !SERVER_NAME!
+
+CALL :EchoColor 6 "Проверка имени сервера на запрещенные символы"&echo.
 if exist "%servername1txt%" (
-	CALL :EchoColor 2 "[V] servername1.txt - имя сервера во временный файл [СОХРАНЕНО]"&echo.
+	CALL :EchoColor 2 "[V] Имя сервера "
+	<nul set /p "strTemp=^!!SERVER_NAME!^! "
+	CALL :EchoColor 2 "во временный файл [СОХРАНЕНО]:"&echo.
+	CALL :EchoColor 2 "    %servername1txt%"&echo.
 ) else (
-	CALL :EchoColor 4 "[X] servername1.txt - имя сервера во временный файл [НЕ СОХРАНЕНО]"&echo.
+	CALL :EchoColor 4 "[X] Имя сервера "
+	<nul set /p "strTemp=^!!SERVER_NAME!^! "
+	CALL :EchoColor 4 "во временный файл [НЕ СОХРАНЕНО]:"&echo.
+	CALL :EchoColor 4 "    %servername1txt%"&echo.
 	CALL :EchoColor 4 "    Работа скрипта будет завершена."&echo.&echo.&pause&GoTo :START
 	)
+
 >"%servername2txt%" echo %SERVER_NAME%
 rem эта строка здесь обязательна на случай, когда имя клиента оканчивается на ^ (птичку)
 if exist "%servername2txt%" (
-	CALL :EchoColor 2 "[V] servername2.txt - имя сервера во временный файл [СОХРАНЕНО]"&echo.
+	CALL :EchoColor 2 "[V] Имя сервера "
+	<nul set /p "strTemp=%%%SERVER_NAME%%% "
+	CALL :EchoColor 2 "во временный файл [СОХРАНЕНО]:"&echo.
+	CALL :EchoColor 2 "    %servername2txt%"&echo.
 ) else (
-	CALL :EchoColor 4 "[X] servername2.txt - имя сервера во временный файл [НЕ СОХРАНЕНО]"&echo.
+	CALL :EchoColor 4 "[X] Имя сервера "
+	<nul set /p "strTemp=%%%SERVER_NAME%%% "
+	CALL :EchoColor 4 "во временный файл [НЕ СОХРАНЕНО]:"&echo.
+	CALL :EchoColor 4 "    %servername2txt%"&echo.
 	CALL :EchoColor 4 "    Работа скрипта будет завершена."&echo.&echo.&pause&GoTo :START
 	)
 fc /B "%servername1txt%" "%servername2txt%" >nul
@@ -874,40 +893,49 @@ IF "%SERVER_NAME%" == "" GoTo :START
 @echo !SERVER_NAME!|>nul findstr/bei "[a-z0-9_.-]*"
 IF !ERRORLEVEL! NEQ 0 (
 	:SERVERNAMEERROR
-	cls
 	CALL :EchoColor 4 "[ОШИБКА] ИМЯ СЕРВЕРА СОДЕРЖИТ ЗАПРЕЩЕННЫЕ БУКВЫ/СИМВОЛЫ"&echo.
 	timeout /t 10
+	cls
 	GoTo :SERVER_INIT
 ) else (
 		CALL :EchoColor 2 "[V] Проверка имени сервера [ПРОЙДЕНА]"&echo.
 	)
-echo.
 
 set "event=before_SERVER_INIT_[%SERVER_NAME%]"
-CALL :backup
+CALL :BACKUP
 
 CALL :CheckKeyDir
+
+if "%cleanall%" == "auto" (
+	if "%ServerType%" == "WindowsPC" CALL :EchoColor 6 "НАСТРОЙКА СЕРВЕРНОЙ ЧАСТИ [WINDOWS PC] (СОЗДАНИЕ ВСЕХ НЕОБХОДИМЫХ КЛЮЧЕЙ И СЕРТИФИКАТОВ)"&echo.
+if "%ServerType%" == "KeeneticRouter" CALL :EchoColor 6 "НАСТРОЙКА СЕРВЕРНОЙ ЧАСТИ [KEENETIC ROUTER] (СОЗДАНИЕ ВСЕХ НЕОБХОДИМЫХ КЛЮЧЕЙ И СЕРТИФИКАТОВ)"&echo.
+echo.
+)
 
 set "KEY_CN=%SERVER_NAME%"
 
 set "dirtocheck=%serverkeysdir%"
 CALL :checkdir
 
-CALL :EchoColor 6 "Создание пустого файла index.txt"&echo.
+CALL :EchoColor 6 "Создание пустого файла index.txt - базы сертификатов"&echo.
 rem:>"%indextxt%"
 if exist "%indextxt%" (
-	CALL :EchoColor 2 "[V] index.txt [СОЗДАН]"&echo.
+	CALL :EchoColor 2 "[V] index.txt [СОЗДАН]:"&echo.
+	CALL :EchoColor 2 "    %indextxt%"&echo.
 ) else (
-	CALL :EchoColor 4 "[X] index.txt [НЕ СОЗДАН]"&echo.&echo.&pause&GoTo :START
+	CALL :EchoColor 4 "[X] index.txt [НЕ СОЗДАН]:"&echo.
+	CALL :EchoColor 4 "    %indextxt%"&echo.&echo.&pause&GoTo :START
 	)
 echo.
 
 CALL :EchoColor 6 "Создание файла serial с индексом 01"&echo.
 echo 01>"%KEY_DIR%\serial"
 if exist "%KEY_DIR%\serial" (
-	CALL :EchoColor 2 "[V] serial [СОЗДАН]"&echo.
+	CALL :EchoColor 2 "[V] serial [СОЗДАН]:"&echo.
+	CALL :EchoColor 2 "    %KEY_DIR%\serial"&echo.
 ) else (
-	CALL :EchoColor 4 "[X] serial [НЕ СОЗДАН]"&echo.&echo.&pause&GoTo :START
+	CALL :EchoColor 4 "[X] serial [НЕ СОЗДАН]:"&echo.
+	CALL :EchoColor 4 "    %KEY_DIR%\serial"&echo.&echo.&pause&GoTo :START
 	)
 echo.
 
@@ -917,15 +945,19 @@ if %ERRORLEVEL% NEQ 0 (
 	CALL :EchoColor 4 "[X] Ошибка при создании cертификата удостоверяющего центра"&echo.&echo.&pause&GoTo :START
 )
 if exist "%KEY_DIR%\ca.key" (
-	CALL :EchoColor 2 "[V] ca.key - ключ центра сертификации [СОЗДАН]"&echo.
+	CALL :EchoColor 2 "[V] ca.key - ключ центра сертификации [СОЗДАН]:"&echo.
+	CALL :EchoColor 2 "    %KEY_DIR%\ca.key"&echo.
 ) else (
-	CALL :EchoColor 4 "[X] ca.key - ключ центра сертификации [НЕ СОЗДАН]"&echo.&echo.&pause&GoTo :START
+	CALL :EchoColor 4 "[X] ca.key - ключ центра сертификации [НЕ СОЗДАН]:"&echo.
+	CALL :EchoColor 4 "    %KEY_DIR%\ca.key"&echo.&echo.&pause&GoTo :START
 	)
 if exist "%KEY_DIR%\ca.crt" (
-	CALL :EchoColor 2 "[V] ca.crt - корневой сертификат удостоверяющего центра [СОЗДАН]"&echo.
+	CALL :EchoColor 2 "[V] ca.crt - корневой сертификат удостоверяющего центра [СОЗДАН]:"&echo.
+	CALL :EchoColor 2 "    %KEY_DIR%\ca.crt"&echo.
 	rem CALL :EchoColor 2 "[V] CA certificate created [SUCCESFULLY]"&echo.
 ) else (
-	CALL :EchoColor 4 "[X] ca.crt - корневой сертификат удостоверяющего центра [НЕ СОЗДАН]"&echo.&echo.&pause&GoTo :START
+	CALL :EchoColor 4 "[X] ca.crt - корневой сертификат удостоверяющего центра [НЕ СОЗДАН]:"&echo.
+	CALL :EchoColor 4 "    %KEY_DIR%\ca.crt"&echo.&echo.&pause&GoTo :START
 	)	
 echo.
 
@@ -937,10 +969,12 @@ if %ERRORLEVEL% NEQ 0 (
 	CALL :EchoColor 4 "[X] Ошибка при генерации ключа dh%KEY_SIZE%.pem"&echo.&echo.&pause&GoTo :START
 )
 if exist "%KEY_DIR%\dh%KEY_SIZE%.pem" (
-	CALL :EchoColor 2 "[V] dh%KEY_SIZE%.pem - DH-файл (ключ Диффи Хеллмана) [СОЗДАН]"&echo.
+	CALL :EchoColor 2 "[V] dh%KEY_SIZE%.pem - DH-файл (ключ Диффи Хеллмана) [СОЗДАН]:"&echo.
+	CALL :EchoColor 2 "    %KEY_DIR%\dh%KEY_SIZE%.pem"&echo.
 	rem CALL :EchoColor 2 "[V] DH-file created [SUCCESFULLY]"&echo.
 ) else (
-	CALL :EchoColor 4 "[X] dh%KEY_SIZE%.pem - DH-файл (ключ Диффи Хеллмана) [НЕ СОЗДАН]"&echo.&echo.&pause&GoTo :START
+	CALL :EchoColor 4 "[X] dh%KEY_SIZE%.pem - DH-файл (ключ Диффи Хеллмана) [НЕ СОЗДАН]:"&echo.
+	CALL :EchoColor 4 "    %KEY_DIR%\dh%KEY_SIZE%.pem"&echo.&echo.&pause&GoTo :START
 	)
 echo.
 
@@ -950,9 +984,11 @@ CALL :EchoColor 6 "Сервер и каждый клиент должны иметь копию этого ключа"&echo.
 chcp 1251>nul
 if %ERRORLEVEL% NEQ 0 CALL :EchoColor 4 "[X] Ошибка при создании ta.key"&echo.&echo.&pause&GoTo :START
 if exist "%KEY_DIR%\ta.key" (
-	CALL :EchoColor 2 "[V] ta.key - ключ tls-auth [СОЗДАН]"&echo.
+	CALL :EchoColor 2 "[V] ta.key - ключ tls-auth [СОЗДАН]:"&echo.
+	CALL :EchoColor 2 "    %KEY_DIR%\ta.key"&echo.
 ) else (
-	CALL :EchoColor 4 "[X] ta.key - ключ tls-auth [НЕ СОЗДАН]"&echo.&echo.&pause&GoTo :START
+	CALL :EchoColor 4 "[X] ta.key - ключ tls-auth [НЕ СОЗДАН]:"&echo.
+	CALL :EchoColor 4 "    %KEY_DIR%\ta.key"&echo.&echo.&pause&GoTo :START
 	)
 echo.
 
@@ -963,16 +999,20 @@ if %ERRORLEVEL% NEQ 0 (
 	CALL :EchoColor 4 "[X] Ошибка при создании серверного файла запроса или приватного ключа"&echo.&echo.&pause&GoTo :START
 )
 if exist "%KEY_DIR%\%SERVER_NAME%.csr" (
-	CALL :EchoColor 2 "[V] %SERVER_NAME%.csr - файл запроса на подпись сертификата сервера [СОЗДАН]"&echo.
+	CALL :EchoColor 2 "[V] %SERVER_NAME%.csr - файл запроса на подпись сертификата сервера [СОЗДАН]:"&echo.
+	CALL :EchoColor 2 "    %KEY_DIR%\%SERVER_NAME%.csr"&echo.
 	rem CALL :EchoColor 2 "[V] %SERVER_NAME%.csr - certificate sign request created [SUCCESFULLY]"&echo.
 ) else (
-	CALL :EchoColor 4 "[X] %SERVER_NAME%.csr - файл запроса на подпись сертификата сервера [НЕ СОЗДАН]"&echo.&echo.&pause&GoTo :START
+	CALL :EchoColor 4 "[X] %SERVER_NAME%.csr - файл запроса на подпись сертификата сервера [НЕ СОЗДАН]:"&echo.
+	CALL :EchoColor 4 "    %KEY_DIR%\%SERVER_NAME%.csr"&echo.&echo.&pause&GoTo :START
 	)
 if exist "%KEY_DIR%\%SERVER_NAME%.key" (
-	CALL :EchoColor 2 "[V] %SERVER_NAME%.key - приватный ключ сервера [СОЗДАН]"&echo.
+	CALL :EchoColor 2 "[V] %SERVER_NAME%.key - приватный ключ сервера [СОЗДАН]:"&echo.
+	CALL :EchoColor 2 "    %KEY_DIR%\%SERVER_NAME%.key"&echo.
 	rem CALL :EchoColor 2 "[V] %SERVER_NAME%.key - created [SUCCESFULLY]"&echo.
 ) else (
-	CALL :EchoColor 4 "[X] %SERVER_NAME%.key - приватный ключ сервера [НЕ СОЗДАН]"&echo.&echo.&pause&GoTo :START
+	CALL :EchoColor 4 "[X] %SERVER_NAME%.key - приватный ключ сервера [НЕ СОЗДАН]:"&echo.
+	CALL :EchoColor 4 "    %KEY_DIR%\%SERVER_NAME%.key"&echo.&echo.&pause&GoTo :START
 	)
 echo.
 
@@ -984,16 +1024,18 @@ if %ERRORLEVEL% NEQ 0 (
 )
 if exist "%KEY_DIR%\%SERVER_NAME%.crt" (
 	CALL :EchoColor 2 "[V] %SERVER_NAME%.crt - сертификат сервера [СОЗДАН]"&echo.
+	CALL :EchoColor 2 "    %KEY_DIR%\%SERVER_NAME%.crt"&echo.
 	rem CALL :EchoColor 2 "[V] %SERVER_NAME%.crt - server`s certificate created [SUCCESFULLY]"
 ) else (
-	CALL :EchoColor 4 "[X] %SERVER_NAME%.crt - сертификат сервера [НЕ СОЗДАН]"&echo.&echo.&pause&GoTo :START
+	CALL :EchoColor 4 "[X] %SERVER_NAME%.crt - сертификат сервера [НЕ СОЗДАН]"&echo.
+	CALL :EchoColor 4 "    %KEY_DIR%\%SERVER_NAME%.crt"&echo.&echo.&pause&GoTo :START
 	)
 echo.
 
 :: Удаление всех *.old-файлов, созданных в этом процессе, чтобы избежать ошибок при создании файлов в будущем
 del /q "%KEY_DIR%\*.old">nul 2>&1
 
-CALL :EchoColor 6 "Создание конфигурационного %SERVER_NAME%.ovpn-файла"&echo.
+CALL :EchoColor 6 "Создание серверного конфигурационного файла %SERVER_NAME%.ovpn"&echo.
 :: Порт, на котором будем слушать
 echo port %ovpnport%>"%serverovpn%"
 :: Протокол для подключения
@@ -1004,7 +1046,7 @@ echo dev tun>>"%serverovpn%"
 echo %dhcpserver%>>"%serverovpn%"
 if "%ServerType%" == "KeeneticRouter" echo push "route %pushroute%" >>"%serverovpn%"
 :: Каталог с описаниями конфигураций каждого из клиентов
-if "%ServerType%" == "WindowsPC" echo client-config-dir ccd>>"%serverovpn%"
+if "%ServerType%" == "WindowsPC" echo ;client-config-dir ccd>>"%serverovpn%"
 :: echo ifconfig 10.10.10.1 10.10.10.2>>"%serverovpn%"
 :: Разрешаем общаться клиентам внутри тоннеля
 echo client-to-client>>"%serverovpn%"
@@ -1075,12 +1117,13 @@ echo ^</dh^>>>"%serverovpn%"
 :: ========== Окончание создания %server_name%.ovpn-файла ==========
 
 if exist "%serverovpn%" (
-	CALL :EchoColor 2 "[V] %serverovpn% [СОЗДАН]"&echo.
+	CALL :EchoColor 2 "[V] %SERVER_NAME%.ovpn - серверный конфигурационный файл [СОЗДАН]:"&echo.
+	CALL :EchoColor 2 "    %serverovpn%"&echo.
 ) else (
-	CALL :EchoColor 4 "[X] %serverovpn% [НЕ СОЗДАН]"&echo.
+	CALL :EchoColor 4 "[X] %SERVER_NAME%.ovpn - серверный конфигурационный файл [НЕ СОЗДАН]:"&echo.
+	CALL :EchoColor 2 "    %serverovpn%"&echo.
 	CALL :EchoColor 4 "    ДАЛЬНЕЙШАЯ РАБОТА СКРИПТА [НЕВОЗМОЖНА]"&echo.&echo.&pause&GoTo :START
 	)
-echo.
 
 :: [ДОРАБОТАТЬ] Надо ли вывести подробный лог о копировании каждого файла?
 echo f|xcopy /y "%KEY_DIR%\%SERVER_NAME%.key" "%serverkeysdir%\%SERVER_NAME%.key" >nul 2>&1
@@ -1094,7 +1137,7 @@ echo f|xcopy /y "%KEY_DIR%\dh%KEY_SIZE%.pem" "%serverkeysdir%\dh%KEY_SIZE%.pem" 
 :: CALL :checkdir
 
 set "event=after_SERVER_INIT_[%SERVER_NAME%]"
-CALL :backup
+CALL :BACKUP
 
 CALL :EchoColor 3 "================================================================================"&echo.
 CALL :EchoColor 2 "[V] НАСТРОЙКА СЕРВЕРНОЙ ЧАСТИ [ЗАВЕРШЕНА]"&echo.
@@ -1109,9 +1152,9 @@ GoTo :START
 :CLIENT-CRT1
 cls
 echo.
-CALL :CHECKOPENVPNFILES
+CALL :checkopenvpnfiles
 cls
-CALL :CHECKINDEXTXT
+CALL :checkindextxt
 echo.
 CALL :EchoColor 6 "СОЗДАНИЕ КЛИЕНТСКОГО КОНФИГУРАЦИОННОГО *.OVPN-ФАЙЛА"&echo.
 echo.
@@ -1130,7 +1173,7 @@ if "%enableclientlist%" == "OFF" GoTo :skipclientlist
 	)
 	If %y% EQU 0 (CALL :EchoColor 4 "[X] Клиентские сертификаты [НЕ НАЙДЕНЫ]"&echo. &echo.)
 	
-	if "%xx%" == "" GoTo :SKIP
+	if "%xx%" == "" GoTo :skip
 	
 	Set /A y=0
 	FOR /F "usebackq tokens=2 delims==" %%i In (`Set "x@@"^|Sort`) DO (
@@ -1140,7 +1183,7 @@ if "%enableclientlist%" == "OFF" GoTo :skipclientlist
 	
 	FOR /L %%i In (1,1,%y%) Do (Set "xx=     %%i"&Call Echo %%xx:~-4%%. %%@@%%i%%)
 	
-	:SKIP
+	:skip
 	CALL :EchoColor 3 "================================================================================"&echo.
 	echo.
 :skipclientlist
@@ -1165,20 +1208,36 @@ set "clientprocess=ON" & GoTo :START
 :clientnxt
 
 >"%clientname1txt%" echo !CLIENT_NAME!
+
+CALL :EchoColor 6 "Проверка имени клиента на запрещенные символы"&echo.
 if exist "%clientname1txt%" (
-	CALL :EchoColor 2 "[V] clientname1.txt - имя клиента во временный файл [СОХРАНЕНО]"&echo.
+	CALL :EchoColor 2 "[V] Имя клиента "
+	<nul set /p "strTemp=^!!CLIENT_NAME!^! "
+	CALL :EchoColor 2 "во временный файл [СОХРАНЕНО]:"&echo.
+	CALL :EchoColor 2 "    %clientname1txt%"&echo.
 ) else (
-	CALL :EchoColor 4 "[X] clientname1.txt - имя клиента во временный файл [НЕ СОХРАНЕНО]"&echo.
+	CALL :EchoColor 4 "[X] Имя клиента "
+	<nul set /p "strTemp=^!!CLIENT_NAME!^! "
+	CALL :EchoColor 4 "во временный файл [НЕ СОХРАНЕНО]:"&echo.
+	CALL :EchoColor 4 "    %clientname1txt%"&echo.
 	CALL :EchoColor 4 "    Работа скрипта будет завершена."&echo.&echo.&pause&GoTo :START
 	)
+
 >"%clientname2txt%" echo %CLIENT_NAME%
 rem эта строка здесь обязательна на случай, когда имя клиента оканчивается на ^ (птичку)
 if exist "%clientname2txt%" (
-	CALL :EchoColor 2 "[V] clientname2.txt - имя клиента во временный файл [СОХРАНЕНО]"&echo.
+	CALL :EchoColor 2 "[V] Имя клиента "
+	<nul set /p "strTemp=%%%CLIENT_NAME%%% "
+	CALL :EchoColor 2 "во временный файл [СОХРАНЕНО]:"&echo.
+	CALL :EchoColor 2 "    %clientname2txt%"&echo.
 ) else (
-	CALL :EchoColor 4 "[X] clientname2.txt - имя клиента во временный файл [НЕ СОХРАНЕНО]"&echo.
+	CALL :EchoColor 4 "[X] Имя клиента "
+	<nul set /p "strTemp=%%%CLIENT_NAME%%% "
+	CALL :EchoColor 4 "во временный файл [НЕ СОХРАНЕНО]:"&echo.
+	CALL :EchoColor 4 "    %clientname2txt%"&echo.
 	CALL :EchoColor 4 "    Работа скрипта будет завершена."&echo.&echo.&pause&GoTo :START
 	)
+
 fc /B "%clientname1txt%" "%clientname2txt%" >nul
 if %ERRORLEVEL% NEQ 0 GoTO :CLIENTNAMEERROR
 del /q "%clientname1txt%" "%clientname2txt%" >nul
@@ -1188,7 +1247,6 @@ IF "%CLIENT_NAME%" == "" GoTo :START
 @echo !CLIENT_NAME!|>nul findstr/bei "[a-z0-9_.-]*"
 IF !ERRORLEVEL! NEQ 0 (
 	:CLIENTNAMEERROR
-	cls
 	CALL :EchoColor 4 "[ОШИБКА] ИМЯ КЛИЕНТА СОДЕРЖИТ ЗАПРЕЩЕННЫЕ БУКВЫ/СИМВОЛЫ"&echo.
 	timeout /t 10
 	GoTo :CLIENT-CRT1
@@ -1203,7 +1261,9 @@ if %ERRORLEVEL% EQU 0 (
 	cls
 	CALL :EchoColor 4 "[ОШИБКА] Клиент с именем %CLIENT_NAME% уже существует."&echo.
 	CALL :EchoColor 4 "	 Придумайте другое имя."&echo.&echo.&pause&GoTo :CLIENT-CRT1
-)
+) else (
+	CALL :EchoColor 2 "Имя клиента: %CLIENT_NAME% [УНИКАЛЬНО]"&echo.
+	)
 
 :CLIENT-CRT2
 cls
@@ -1241,7 +1301,6 @@ IF "%CLIENT_PASS%" == "" (
 @echo !CLIENT_PASS!|>nul findstr/bei "[a-z0-9_.,@#$;:?(+=~`'/*-]*"
 if !ERRORLEVEL! NEQ 0 (
 	:CLIENTPASSERROR
-	cls
 	CALL :EchoColor 4 "[ОШИБКА] ПАРОЛЬ КЛИЕНТА СОДЕРЖИТ ЗАПРЕЩЕННЫЕ БУКВЫ/СИМВОЛЫ"&echo.
 	timeout /t 10
 	cls
@@ -1250,8 +1309,9 @@ if !ERRORLEVEL! NEQ 0 (
 
 :CLIENT-CRT3
 echo.
+set "KEY_CN=%CLIENT_NAME%"
 set "event=before_adding_client_[%CLIENT_NAME%]"
-CALL :backup
+CALL :BACKUP
 
 set "dirtocheck=%clientkeysdir%\%CLIENT_NAME%"
 CALL :checkdir
@@ -1259,24 +1319,29 @@ CALL :checkdir
 set "KEY_CN=%CLIENT_NAME%"
 
 if "%CLIENT_PASS%" NEQ "" (
-	CALL :EchoColor 6 "Сохранение пароля клиента %CLIENT_NAME% в %clientpasstxt%"&echo.
+	CALL :EchoColor 6 "Сохранение пароля клиента %CLIENT_NAME% в файл:"&echo.
+	CALL :EchoColor 6 "    %clientpasstxt%"&echo.
 	chcp 1251>nul
 	>"%clientpasstxt%" echo %CLIENT_PASS%
 	if exist "%clientpasstxt%" (
-		CALL :EchoColor 2 "[V] pass.txt - пароль клиента %CLIENT_NAME% [СОХРАНЕН]"&echo.
+		CALL :EchoColor 2 "[V] pass.txt - пароль клиента %CLIENT_NAME% [СОХРАНЕН]:"&echo.
+		CALL :EchoColor 2 "    %clientpasstxt%"&echo.
 		set /p passfromtxt=<"%clientpasstxt%"
 		if "%CLIENT_PASS%" NEQ "!passfromtxt!" GoTo :CLIENTPASSERROR
 	) else (
-		CALL :EchoColor 4 "[X] pass.txt - пароль клиента %CLIENT_NAME% [НЕ СОХРАНЕН]"&echo.
+		CALL :EchoColor 4 "[X] pass.txt - пароль клиента %CLIENT_NAME% [НЕ СОХРАНЕН]:"&echo.
+		CALL :EchoColor 4 "    %clientpasstxt%"&echo.
 		pause
 		)
 ) else (
-	CALL :EchoColor 6 "Пароль для клиента %CLIENT_NAME% НЕ ЗАДАН"&echo.
+	CALL :EchoColor 6 "Пароль для клиента %CLIENT_NAME% [НЕ ЗАДАН]"&echo.
 	rem:>"%clientnopasstxt%"
 	if exist "%clientnopasstxt%" (
-		CALL :EchoColor 2 "[V] %clientnopasstxt% [СОЗДАН]"&echo.
+		CALL :EchoColor 2 "[V] Файл с пустым паролем [СОЗДАН]:"&echo.
+		CALL :EchoColor 2 "    %clientnopasstxt%"&echo.
 	) else (
-		CALL :EchoColor 4 "[X] %clientnopasstxt% [НЕ СОЗДАН]"&echo.
+		CALL :EchoColor 4 "[X] Файл с пустым паролем [НЕ СОЗДАН]"&echo.
+		CALL :EchoColor 4 "    %clientnopasstxt%"&echo.
 		pause
 		)
 	)
@@ -1287,18 +1352,22 @@ CALL :EchoColor 6 "%CLIENT_NAME%.key - приватный ключ клиента OpenVPN, секретный
 "%opensslexe%" req -days 3650 %nodes% -new -keyout "%KEY_DIR%\%CLIENT_NAME%.key" -out "%KEY_DIR%\%CLIENT_NAME%.csr" -config "%KEY_CONFIG%" -subj "/C=%KEY_COUNTRY%/ST=%KEY_PROVINCE%/L=%KEY_CITY%/O=%KEY_ORG%/OU=%KEY_OU%/CN=%KEY_CN%/name=%KEY_NAME%/emailAddress=%KEY_EMAIL%" %passout%
 if %ERRORLEVEL% NEQ 0 CALL :EchoColor 4 "[X] Ошибка при создании клиентского файла запроса или приватного ключа"&echo.&echo.&pause&GoTo :START
 if exist "%KEY_DIR%\%CLIENT_NAME%.csr" (
-	CALL :EchoColor 2 "[V] %CLIENT_NAME%.csr - файл запроса на подпись сертификата клиента [СОЗДАН]"&echo.
+	CALL :EchoColor 2 "[V] %CLIENT_NAME%.csr - файл запроса на подпись сертификата клиента [СОЗДАН]:"&echo.
+	CALL :EchoColor 2 "    %KEY_DIR%\%CLIENT_NAME%.csr"&echo.
 	rem CALL :EchoColor 2 "[V] %CLIENT_NAME%.csr - certificate sign request created [SUCCESFULLY]"&echo.
 ) else (
-	CALL :EchoColor 4 "[X] %CLIENT_NAME%.csr - файл запроса на подпись сертификата клиента [НЕ СОЗДАН]"&echo.
+	CALL :EchoColor 4 "[X] %CLIENT_NAME%.csr - файл запроса на подпись сертификата клиента [НЕ СОЗДАН]:"&echo.
+	CALL :EchoColor 4 "    %KEY_DIR%\%CLIENT_NAME%.csr"&echo.
 	rem CALL :EchoColor 4 "[X] %CLIENT_NAME%.csr - certificate sign request [NOT CREATED]"&echo.
 	echo.&pause&GoTo :START
 	)
 if exist "%KEY_DIR%\%CLIENT_NAME%.key" (
-	CALL :EchoColor 2 "[V] %CLIENT_NAME%.key - приватный ключ клиента [СОЗДАН]"&echo.
+	CALL :EchoColor 2 "[V] %CLIENT_NAME%.key - приватный ключ клиента [СОЗДАН]:"&echo.
+	CALL :EchoColor 2 "    %KEY_DIR%\%CLIENT_NAME%.key"&echo.
 	rem CALL :EchoColor 2 "[V] %CLIENT_NAME%.key created [SUCCESFULLY]"&echo.
 ) else (
-	CALL :EchoColor 4 "[X] %CLIENT_NAME%.key - приватный ключ клиента [НЕ СОЗДАН]"&echo.
+	CALL :EchoColor 4 "[X] %CLIENT_NAME%.key - приватный ключ клиента [НЕ СОЗДАН]:"&echo.
+	CALL :EchoColor 4 "    %KEY_DIR%\%CLIENT_NAME%.key"&echo.
 	rem CALL :EchoColor 4 "[X] %CLIENT_NAME%.key [NOT CREATED]"&echo.
 	echo.&pause&GoTo :START
 	)
@@ -1309,11 +1378,13 @@ CALL :EchoColor 6 "Создание пары сертификат/ключ"&echo.
 "%opensslexe%" ca -days 3650 -out "%KEY_DIR%\%CLIENT_NAME%.crt" -in "%KEY_DIR%\%CLIENT_NAME%.csr" -config "%KEY_CONFIG%" -batch
 if %ERRORLEVEL% NEQ 0 CALL :EchoColor 4 "[X] Ошибка при подписи клиентского сертификата"&echo.&echo.&pause&GoTo :START
 if exist "%KEY_DIR%\%CLIENT_NAME%.crt" (
-	CALL :EchoColor 2 "[V] %CLIENT_NAME%.crt - сертификат клиента [СОЗДАН]"&echo.
+	CALL :EchoColor 2 "[V] %CLIENT_NAME%.crt - сертификат клиента [СОЗДАН]:"&echo.
+	CALL :EchoColor 2 "    %KEY_DIR%\%CLIENT_NAME%.crt"&echo.
 	rem CALL :EchoColor 2 "[V] %CLIENT_NAME%.crt - Client`s certificate created [SUCCESFULLY]"&echo.
 ) else (
-	CALL :EchoColor 4 "[X] %CLIENT_NAME%.crt - сертификат клиента [НЕ СОЗДАН]"&echo.
+	CALL :EchoColor 4 "[X] %CLIENT_NAME%.crt - сертификат клиента [НЕ СОЗДАН]:"&echo.
 	rem CALL :EchoColor 4 "[X] %CLIENT_NAME%.crt - client`s certificate [NOT CREATED]"&echo.
+	CALL :EchoColor 4 "    %KEY_DIR%\%CLIENT_NAME%.crt"&echo.
 	echo.&pause&GoTo :START
 	)
 echo.
@@ -1386,9 +1457,11 @@ echo ^</tls-auth^>>>"%clientovpn%"
 :: ----------Окончание создания %CLIENT_NAME%.ovpn-файла----------
 
 if exist "%clientovpn%" (
-	CALL :EchoColor 2 "[V] %clientovpn% [СОЗДАН]"&echo.
+	CALL :EchoColor 2 "[V] Клиентский конфигурационный файл %CLIENT_NAME%.ovpn [СОЗДАН]:"&echo.
+	CALL :EchoColor 2 "    %clientovpn% "&echo.
 ) else (
-	CALL :EchoColor 4 "[X] %clientovpn% [НЕ СОЗДАН]"&echo.
+	CALL :EchoColor 4 "[X] Клиентский конфигурационный файл %CLIENT_NAME%.ovpn [НЕ СОЗДАН]:"&echo.
+	CALL :EchoColor 4 "    %clientovpn% "&echo.
 	CALL :EchoColor 4 "    ДАЛЬНЕЙШАЯ РАБОТА СКРИПТА [НЕВОЗМОЖНА]"&echo.&echo.&pause&GoTo :START
 	)
 echo.
@@ -1401,11 +1474,11 @@ echo f|xcopy /y "%KEY_DIR%\ta.key" "%clientkeysdir%\%CLIENT_NAME%\ta.key" >nul
 echo f|xcopy /y "%KEY_DIR%\dh%KEY_SIZE%.pem" "%clientkeysdir%\%CLIENT_NAME%\dh%KEY_SIZE%.pem" >nul
 
 set "event=after_adding_client_[%CLIENT_NAME%]"
-CALL :backup
+CALL :BACKUP
 
 CALL :EchoColor 3 "================================================================================"&echo.
-CALL :EchoColor 2 "[V] СОЗДАНИЕ КЛИЕНТСКОГО КОНФИГУРАЦИОННОГО *.OVPN-ФАЙЛА"&echo.
-CALL :EchoColor 2 "    %clientovpn% [ЗАВЕРШЕНО]"&echo.
+CALL :EchoColor 2 "[V] СОЗДАНИЕ КЛИЕНТСКОГО КОНФИГУРАЦИОННОГО *.ovpn-ФАЙЛА [ЗАВЕРШЕНО]"&echo.
+CALL :EchoColor 2 "    %clientovpn%"&echo.
 echo.
 echo Скопируйте файл "%clientovpn%" на компьютер клиента в папку "\OpenVPN\config\" или в "\OpenVPN\config-auto\" и перезапустите службу/программу OpenVPN.
 CALL :EchoColor 3 "================================================================================"&echo.
@@ -1416,9 +1489,9 @@ GoTo :START
 :REVOKE-CRT1
 :: Отзыв сертификата клиента
 cls
-CALL :CHECKOPENVPNFILES
+CALL :checkopenvpnfiles
 cls
-CALL :CHECKINDEXTXT
+CALL :checkindextxt
 echo.
 	Set /A y=0
 	FOR /F "usebackq skip=1 tokens=1,7 delims=/" %%i In ("%indextxt%") DO (
@@ -1440,7 +1513,7 @@ echo.
 	echo.
 	CALL :EchoColor 3 "	ВВЕДИТЕ НОМЕР, СООТВЕТСТВУЮЩИЙ СЕРТИФИКАТУ, КОТОРЫЙ ТРЕБУЕТСЯ ОТОЗВАТЬ"&echo.
 	echo.
-	FOR /L %%i In (1,1,%y%) Do (Set "xx=     %%i"&Call Echo %%xx:~-4%%. %%@@%%i%%)
+	FOR /L %%i In (1,1,%y%) Do (Set "xx=     %%i"&Call Echo  %%xx:~-4%% - %%@@%%i%%)
 
 	:StartSelectCrt
 		echo.
@@ -1451,12 +1524,10 @@ echo.
 		Set /P "NN="
 		If "%NN%"=="" GoTo :START
 		If 1 LEQ %NN% If %NN% LEQ %y% (Call Set "revokeclient=%%@@%NN%%%" &GoTo :EndSelectCrt)
-		CALL :EchoColor 4 "[X] Введено неверное значение "%NN%", введите верное:"&echo. &GoTo :StartSelectCrt
+		CALL :EchoColor 4 "[X] Сертификат под номером "%NN%" не найден. Введите верный номер:"&echo. &GoTo :StartSelectCrt
 	:EndSelectCrt
-	call set "revokeclient2=%%revokeclient:~0,-10%%"
-	if "%revokeclient%" == "%revokeclient2% [ОТОЗВАН]" (
-		set "revokeclient=%revokeclient2%"
-		CALL :EchoColor 4 "[X] Сертификат клиента %revokeclient% был ранее [ОТОЗВАН]"&echo.&echo.&pause&GoTo :REVOKE-CRT1
+	if "%revokeclient%" == "%revokeclient:~0,-10% [ОТОЗВАН]" (
+		CALL :EchoColor 4 "[X] Сертификат клиента %revokeclient:~0,-10% был ранее [ОТОЗВАН]"&echo.&echo.&pause&GoTo :REVOKE-CRT1
 	)
 
 :REVOKE-CRT2
@@ -1480,25 +1551,41 @@ echo.
 IF "%act3%" NEQ "00" GoTo :REVOKE-CRT1
 
 :REVOKE-CRT3
-CALL :EchoColor 6 "Проверка наличия сертификата %revokeclient%.crt в папке %KEY_DIR%"&echo.
+CALL :EchoColor 6 "Проверка наличия сертификата "
+CALL :EchoColor 3 "%revokeclient%.crt "
+CALL :EchoColor 6 "в папке:"&echo.
+CALL :EchoColor 6 "    %KEY_DIR%"&echo.
 if exist "%KEY_DIR%\%revokeclient%.crt" (
-	CALL :EchoColor 2 "[V] Сертификат %KEY_DIR%\%revokeclient%.crt [НАЙДЕН]"&echo.
+	CALL :EchoColor 2 "[V] Сертификат "
+	CALL :EchoColor 3 "%revokeclient%.crt "
+	CALL :EchoColor 2 "[НАЙДЕН]:"&echo.
+	CALL :EchoColor 2 "    %KEY_DIR%\%revokeclient%.crt"&echo.
 ) else (
-	CALL :EchoColor 4 "[X] Сертификат %KEY_DIR%\%revokeclient%.crt [НЕ НАЙДЕН]"&echo.&echo.&pause&GoTo :REVOKE-CRT1
+	CALL :EchoColor 4 "[X] Сертификат "
+	CALL :EchoColor 3 "%revokeclient%.crt "
+	CALL :EchoColor 4 "[НЕ НАЙДЕН]:"&echo.
+	CALL :EchoColor 4 "    %KEY_DIR%\%revokeclient%.crt"&echo.&echo.&pause&GoTo :REVOKE-CRT1
 	)
 echo.
 
-CALL :FINDSERVERNAME
+CALL :findservername
 
 set "event=before_REVOKE_client_[%revokeclient%]"
-CALL :backup
+CALL :BACKUP
 
-CALL :EchoColor 6 "Отзыв сертификата %revokeclient%.crt"&echo.
+CALL :EchoColor 6 "Отзыв сертификата "
+CALL :EchoColor 3 "%revokeclient%.crt"&echo.
 "%opensslexe%" ca -revoke "%KEY_DIR%\%revokeclient%.crt" -config "%KEY_CONFIG%"
 if %ERRORLEVEL% EQU 0 (
-	CALL :EchoColor 2 "[V] Сертификат %revokeclient%.crt [ОТОЗВАН]"&echo.
+	CALL :EchoColor 2 "[V] Сертификат "
+	CALL :EchoColor 3 "%revokeclient%.crt "
+	CALL :EchoColor 2 "[ОТОЗВАН]:"&echo.
+	CALL :EchoColor 2 "    %KEY_DIR%\%revokeclient%.crt"&echo.
 ) else (
-	CALL :EchoColor 4 "[X] Сертификат %revokeclient%.crt [НЕ ОТОЗВАН]"&echo.&echo.&pause&GoTo :REVOKE-CRT1
+	CALL :EchoColor 4 "[X] Сертификат "
+	CALL :EchoColor 3 "%revokeclient%.crt "
+	CALL :EchoColor 4 "[НЕ ОТОЗВАН]:"&echo.
+	CALL :EchoColor 4 "    %KEY_DIR%\%revokeclient%.crt"&echo.&echo.&pause&GoTo :REVOKE-CRT1
 	)
 echo.
 
@@ -1508,55 +1595,79 @@ CALL :DelCrl-verify
 CALL :AddCrl-verify
 
 set "event=after_REVOKE_client_[%revokeclient%]"
-CALL :backup
+CALL :BACKUP
 
 CALL :EchoColor 3 "================================================================================"&echo.
-CALL :EchoColor 2 "[V] ОТЗЫВ СЕРТИФИКАТА КЛИЕНТА %revokeclient% [ЗАВЕРШЕН]"&echo.
+CALL :EchoColor 2 "[V] ОТЗЫВ СЕРТИФИКАТА КЛИЕНТА "
+CALL :EchoColor 3 "%revokeclient% "
+CALL :EchoColor 2 "[ЗАВЕРШЕН]:"&echo.
 echo.
-echo Для вступления изменений в силу скопируйте файл "%serverovpn%" в папку "\OpenVPN\config\" или в "\OpenVPN\config-auto\" и перезапустите службу/программу OpenVPN.
+echo Для вступления изменений в силу скопируйте файл:
+CALL :EchoColor 3 "%serverovpn%"&echo.
+echo в папку "\OpenVPN\config\" или в "\OpenVPN\config-auto\" и перезапустите службу/программу OpenVPN.
+echo.
 echo Если у вас роутер Keenetic, то содержимое файла скопируйте в роутер и перезапустите OpenVPN-подключение.
 CALL :EchoColor 3 "================================================================================"&echo.
 echo.
 pause
 GoTo :START
 
-:FINDSERVERNAME
-:: [ДОРАБОТАТЬ] Если серверное имя не найдено
+:findservername
+:: [ДОРАБОТАТЬ] Если серверное имя не найдено по причине пустого файла
 CALL :EchoColor 6 "Поиск имени серверного конфигурационного *.ovpn-файла"&echo.
 :: Считываем в переменную первую строку
 Set /p serverstr=<"%indextxt%"
 :: Находим имя сервера
+:: [ДОРАБОТАТЬ] Алгорит поиска серверного имени. Не всегда корректно может определить при таком алгоритме поиска
 FOR /F "tokens=13 delims=/=" %%i In ("%serverstr%") DO set "SERVER_NAME=%%i"
-CALL :EchoColor 2 "[V] Серверное имя %SERVER_NAME% [НАЙДЕНО]"&echo.
+CALL :EchoColor 2 "[V] Серверное имя [НАЙДЕНО]:"&echo.
+CALL :EchoColor 3 "    %SERVER_NAME%"&echo.
 echo.
 GoTo :EOF
 
 :GENERATECRLPEM
-CALL :EchoColor 6 "Генерация файла crl.pem с информацией об отозванных сертификатах"&echo.
+CALL :EchoColor 6 "Генерация файла crl.pem с информацией об отозванных сертификатах:"&echo.
+CALL :EchoColor 6 "    %KEY_DIR%\crl.pem"&echo.
 :: CALL :EchoColor 6 "rem generate new crl"&echo.
-if exist "%KEY_DIR%\crl.pem" set "crlpemyes=ОБНОВЛЁН" & set "crlpemno=НЕ ОБНОВЛЁН" || set "crlpemyes=СОЗДАН" & set "crlpemno=НЕ СОЗДАН"
+
+if exist "%KEY_DIR%\crl.pem" (
+	set "crlpemyes=ОБНОВЛЁН"
+	set "crlpemno=НЕ ОБНОВЛЁН"
+) else (
+	set "crlpemyes=СОЗДАН"
+	set "crlpemno=НЕ СОЗДАН"
+	)
+
 "%opensslexe%" ca -gencrl -out "%KEY_DIR%\crl.pem" -config "%KEY_CONFIG%"
 if %ERRORLEVEL% EQU 0 (
-	CALL :EchoColor 2 "[V] %KEY_DIR%\crl.pem [%crlpemyes%]"&echo.
+	CALL :EchoColor 2 "[V] crl.pem [%crlpemyes%]:"&echo.
+	CALL :EchoColor 2 "    %KEY_DIR%\crl.pem"&echo.
 ) else (
-	CALL :EchoColor 4 "[X] %KEY_DIR%\crl.pem [%crlpemno%]"&echo.&echo.&pause&GoTo :START
+	CALL :EchoColor 4 "[X] crl.pem [%crlpemno%]:"&echo.
+	CALL :EchoColor 4 "    %KEY_DIR%\crl.pem"&echo.&echo.&pause&GoTo :START
 	)
 echo.
 GoTo :EOF
 
 :CHECKSERVEROVPN
-CALL :EchoColor 6 "Проверка наличия серверного конфигурационного *.ovpn-файла"&echo.
+CALL :EchoColor 6 "Проверка наличия серверного конфигурационного файла:"&echo.
+CALL :EchoColor 6 "    %serverovpn%"&echo.
 if exist "%serverovpn%" (
-	CALL :EchoColor 2 "[V] Файл %serverovpn% [НАЙДЕН]"&echo.
+	CALL :EchoColor 2 "[V] Серверный конфигурационный файл [НАЙДЕН]:"&echo.
+	CALL :EchoColor 2 "    %serverovpn%"&echo.
 ) else (
-	CALL :EchoColor 4 "[X] Файл %serverovpn% [НЕ НАЙДЕН]"&echo.
-	CALL :EchoColor 4 "[X] Добавить информацию об отозванных сертификатах [НЕ УДАЛОСЬ]"&echo.&echo.&pause&GoTo :START
+	CALL :EchoColor 2 "[X] Серверный конфигурационный файл [НЕ НАЙДЕН]:"&echo.
+	CALL :EchoColor 4 "    %serverovpn%"&echo.
+	echo.
+	CALL :EchoColor 4 "    Добавить информацию об отозванных сертификатах [НЕ УДАЛОСЬ]"&echo.&echo.&pause&GoTo :START
 	)
 echo.
 GoTo :EOF
 
 :DelCrl-verify
-CALL :EchoColor 6 "Удаление устаревшей информации об отозванных сертификатах из серверного ovpn-файла"&echo.
+:: [ДОРАБОТАТЬ] Удаление только от и до, а не от и до конца файла
+CALL :EchoColor 6 "Поиск сведений об отозванных сертификатах в серверном конфигурационном файле:"&echo.
+CALL :EchoColor 6 "    %serverovpn%"&echo.
 :: set input file
 set "f_in=%serverovpn%"
 :: set output file
@@ -1566,22 +1677,37 @@ set "f_tmp=%TEMP%\tmp.txt"
 set "word3=<crl-verify>"
 
 find "%word3%" "%f_in%" 2>nul >nul
-if %ERRORLEVEL% NEQ 0 (
-	CALL :EchoColor 2 "[V] В файле %serverovpn%"&echo.
-	CALL :EchoColor 2 "    информации об отозванных сертификатах [НЕ НАЙДЕНО]"&echo.
+if %ERRORLEVEL% EQU 0 (
+	CALL :EchoColor 2 "[V] Сведения об отозванных сертификатах в серверном конфигурационном файле [НАЙДЕНЫ]:"&echo.
+	CALL :EchoColor 2 "    %serverovpn%"&echo.
+) else (
+	CALL :EchoColor 4 "[X] Сведений об отозванных сертификатах в серверном конфигурационном файле [НЕ НАЙДЕНО]:"&echo.
+	CALL :EchoColor 4 "    %serverovpn%"&echo.
 	set "revokeinfo=no"
 	echo.
 	GoTo :EOF
-)
+	)
+echo.
+CALL :EchoColor 6 "Удаление сведений об отозванных сертификатах из серверного конфигурационного файла:"&echo.
+CALL :EchoColor 6 "    %serverovpn%"&echo.
 set nStr=0
 for /f "delims=" %%a in ('findstr /nrc:"." "%f_in%"') do echo.%%a>>"%f_tmp%"
 for /f "tokens=1 delims=:" %%a in ('findstr /nc:"%word3%" "%f_in%"') do (CALL :sum %%a)
 del /q "%f_tmp%">nul 2>&1 
-del /q "%f_in%">nul 2>&1 
+del /q "%f_in%">nul 2>&1
+:: [ДОРАБОТАТЬ] Проверка прав доступа к папке и файлу
 ren "%f_out%" %SERVER_NAME%.ovpn
 set "revokeinfo=yes"
-CALL :EchoColor 2 "[V] Устаревшая информация об отозванных сертификатах из файла"&echo.
-CALL :EchoColor 2 "    %serverovpn% [УДАЛЕНА]"&echo.
+find "%word3%" "%f_in%" 2>nul >nul
+if %ERRORLEVEL% NEQ 0 (
+	CALL :EchoColor 2 "[V] Сведения об отозванных сертификатах из серверного конфигурационного файла [УДАЛЕНЫ]:"&echo.
+	CALL :EchoColor 2 "    %serverovpn%"&echo.
+) else (
+	CALL :EchoColor 4 "[X] Сведения об отозванных сертификатах из серверного конфигурационного файла [НЕ УДАЛЕНЫ]:"&echo.
+	CALL :EchoColor 4 "    %serverovpn%"&echo.
+	echo.
+	CALL :EchoColor 4 "    Проверьте правильно ли указан путь в скрипте и права доступа к этому файлу и папке"&echo.&echo.&pause&GoTo :START
+	)
 echo.
 GoTo :EOF
  
@@ -1595,7 +1721,9 @@ set /a nStr=%1+2
 Exit /B
 
 :AddCrl-verify
-CALL :EchoColor 6 "Добавление информации об отозванных сертификатах в серверный ovpn-файл"&echo.
+:: [ДОРАБОТАТЬ] Проверку если не удалось добавить сведения. учесть информацию, что может не быть отозванных сертификатов (но сгенерироваться файл всё-равно должен). Проверить если строка <crl-verify> начинается не с новой. будет ли работать?
+CALL :EchoColor 6 "Добавление информации об отозванных сертификатах в серверный конфигурационный файл:"&echo.
+CALL :EchoColor 6 "    %serverovpn%"&echo.
 echo ^<crl-verify^>>>"%f_in%"
 set "header_line="
 for /f "tokens=1  delims=[]" %%a in ('find /i /n "-----BEGIN X509 CRL-----" "%KEY_DIR%\crl.pem" ') do set /a "header_line=%%a-1">nul 2>&1
@@ -1604,12 +1732,12 @@ if defined header_line (
 )
 echo ^</crl-verify^>>>"%f_in%"
 if "%revokeinfo%" == "yes" (
-	CALL :EchoColor 2 "[V] Информация об отозванных сертификатах в файле"&echo.
-	CALL :EchoColor 2 "    %serverovpn% [ОБНОВЛЕНА]"&echo.
+	CALL :EchoColor 2 "[V] Информация об отозванных сертификатах в серверном конфигурационном файле [ОБНОВЛЕНА]:"&echo.
+	CALL :EchoColor 2 "    %serverovpn%"&echo.
 )
 if "%revokeinfo%" == "no" (
-	CALL :EchoColor 2 "[V] Информация об отозванных сертификатах в файл"&echo.
-	CALL :EchoColor 2 "    %serverovpn% [ДОБАВЛЕНА]"&echo.
+	CALL :EchoColor 2 "[V] Информация об отозванных сертификатах в серверный конфигурационный файл [ДОБАВЛЕНА]:"&echo.
+	CALL :EchoColor 2 "    %serverovpn%"&echo.
 )
 echo.
 GoTo :EOF
@@ -1619,38 +1747,53 @@ cls
 echo.
 CALL :EchoColor 6 "ОБНОВЛЕНИЕ ДАННЫХ ОБ ОТОЗВАННЫХ СЕРТИФИКАТАХ"&echo.
 echo.
-CALL :FINDSERVERNAME
+CALL :checkindextxt
+CALL :findservername
 set "event=before_GENERATECRLPEM"
-CALL :backup
+CALL :BACKUP
 CALL :GENERATECRLPEM
 CALL :CHECKSERVEROVPN
 CALL :DelCrl-verify
 CALL :AddCrl-verify
 set "event=after_GENERATECRLPEM"
-CALL :EchoColor 3 "================================================================================"&echo.
-CALL :EchoColor 2 "[V] Файл crl.pem с информацией об отозванных сертификатах [ОБНОВЛЁН]"&echo.
-CALL :EchoColor 2 "[V] Файл %serverovpn% [ОБНОВЛЁН]"&echo.
+CALL :EchoColor 3 "========================================================================================="&echo.
+CALL :EchoColor 2 "[V] crl.pem - файл с информацией об отозванных сертификатах [ОБНОВЛЁН]:"&echo.
+CALL :EchoColor 2 "    %KEY_DIR%\crl.pem"&echo.
 echo.
-echo Для вступления изменений в силу скопируйте файл "%serverovpn%" в папку "\OpenVPN\config\" или в "\OpenVPN\config-auto\" и перезапустите службу/программу OpenVPN.
-echo Если у вас роутер Keenetic, то содержимое файла скопируйте в роутер и перезапустите OpenVPN-подключение.
-CALL :EchoColor 3 "================================================================================"&echo.
+CALL :EchoColor 2 "[V] %SERVER_NAME%.ovpn - серверный конфигурационный Файл [ОБНОВЛЁН]:"&echo.
+CALL :EchoColor 2 "    %serverovpn%"&echo.
+echo.
+echo Для вступления изменений в силу скопируйте файл:
+CALL :EchoColor 3 "%serverovpn%"&echo.
+echo в папку "\OpenVPN\config\" или в "\OpenVPN\config-auto\" и перезапустите службу/программу
+echo OpenVPN.
+echo.
+echo Если у вас роутер Keenetic, то содержимое файла скопируйте в роутер и перезапустите
+echo OpenVPN-подключение.
+CALL :EchoColor 3 "========================================================================================="&echo. 
 echo.
 pause
 GoTo :START
  
 :checkdir
-CALL :EchoColor 6 "Проверка наличия папки %dirtocheck%"&echo.
+CALL :EchoColor 6 "Проверка наличия папки:"&echo.
+CALL :EchoColor 6 "    %dirtocheck%"&echo.
 if exist "%dirtocheck%" (
-	CALL :EchoColor 2 "[V] Папка %dirtocheck% уже [СУЩЕСТВУЕТ]"&echo.
+	CALL :EchoColor 2 "[V] Папка уже [СУЩЕСТВУЕТ]:"&echo.
+	CALL :EchoColor 2 "    %dirtocheck%"&echo.
 ) else (
-	CALL :EchoColor 4 "[X] Папка %dirtocheck% [ОТСУТСТВУЕТ]"&echo.
-	CALL :EchoColor 6 "Попытка создания папки %dirtocheck%"&echo.
+	CALL :EchoColor 4 "[X] Папка [ОТСУТСТВУЕТ]:"&echo.
+	CALL :EchoColor 4 "    %dirtocheck%"&echo.
+	CALL :EchoColor 6 "Создание папки:"&echo.
+	CALL :EchoColor 6 "    %dirtocheck%"&echo.
 	mkdir "%dirtocheck%"
 	if %ERRORLEVEL% EQU 0 (
-		CALL :EchoColor 2 "[V] Папка %dirtocheck% [СОЗДАНА]"&echo.
+		CALL :EchoColor 2 "[V] Папка [СОЗДАНА]:"&echo.
+		CALL :EchoColor 2 "    %dirtocheck%"&echo.
 	) else (
-		CALL :EchoColor 4 "[X] Не удалось создать %dirtocheck%"&echo.
-		CALL :EchoColor 4 "[X] Проверьте права доступа на папку %dirtocheck%"&echo.
+		CALL :EchoColor 4 "[X] Не удалось создать папку:"&echo.
+		CALL :EchoColor 4 "    %dirtocheck%"&echo.
+		CALL :EchoColor 4 "    Проверьте правильно ли указан путь в скрипте и права доступа к этой папке"&echo.
 		echo.&pause&GoTo :START
 		)
 	)
@@ -1696,11 +1839,14 @@ IF !act5! == 1 (
 )
 GoTo :START
 
-:backup
-CALL :EchoColor 6 "Создание бэкапа..."&echo.
+:BACKUP
+echo.
+CALL :EchoColor 6 "СОЗДАНИЕ БЭКАПА"&echo.
+echo.
 if not exist "%backupfolderin%" (
-	CALL :EchoColor 4 "[X] Папка %backupfolderin% [НЕ ОБНАРУЖЕНА]"&echo.
-	CALL :EchoColor 4 "    Проверьте правильность указания пути в скрипте"&echo.&echo.&pause&GoTo :START
+	CALL :EchoColor 4 "[X] Папка [НЕ ОБНАРУЖЕНА]"&echo.
+	CALL :EchoColor 4 "    %backupfolderin%"&echo.
+	CALL :EchoColor 4 "    Проверьте правильно ли указан путь в скрипте и права доступа к этой папке"&echo.&echo.&pause&GoTo :START
 )
 set "dirtocheck=%backupfolderout%"
 CALL :checkdir
@@ -1714,16 +1860,18 @@ set "Second=%sDateTime:~12,2%"
 set "backupprocess=ON" & GoTo :START
 :backupnxt
 
-CALL :backup7z
+CALL :BACKUP7z
 
-if not exist "%backupfolderout%\%backupfile%" (CALL :backupwinrar)
-if not exist "%backupfolderout%\%backupfile%" (CALL :backupmakecab)
+if not exist "%backupfolderout%\%backupfile%" (CALL :BACKUPwinrar)
+if not exist "%backupfolderout%\%backupfile%" (CALL :BACKUPmakecab)
 if not exist "%backupfolderout%\%backupfile%" (
-	CALL :EchoColor 4 "[X] БЭКАП СОЗДАТЬ НЕ УДАЛОСЬ"&echo.
+	CALL :EchoColor 4 "[X] БЭКАП СОЗДАТЬ НЕ УДАЛОСЬ:"&echo.
+	CALL :EchoColor 4 "    %backupfolderout%\%backupfile%"&echo.
+	echo.
 	timeout /t 5
 )
 if exist "%backupfolderout%\%backupfile%" (
-	CALL :EchoColor 2 "[V] БЭКАП [СОЗДАН]"&echo.
+	CALL :EchoColor 2 "[V] БЭКАП [СОЗДАН]:"&echo.
 	CALL :EchoColor 2 "    %backupfolderout%\%backupfile%"&echo.
 	echo.
 	timeout /t 3 >nul 2>&1
@@ -1786,7 +1934,7 @@ REM - - - - - - - - -
 IF NOT "%~1"=="" CALL :MAKE_CAB %* /B& GoTo :END
 
 :: if not exist "%backupfolderout%" mkdir "%backupfolderout%"
-CALL :DELETETEMPFILESBEFORESTART
+CALL :deletetempfilesbeforestart
 
 CALL :MAKE_CAB /S:"%backupfolderin%" /D:"%backupfolderout%" /N:"%backupfile%" /DECO:">>>" /DECOF:0
 GoTo :END
@@ -1902,7 +2050,7 @@ if exist "%backupfolderout%\%backupfile%" (
 		echo ОШИБОК НЕ ОБНАРУЖЕНО
 		echo.
 	)
-	CALL :DELETETEMPFILESAFTERMAKECAB
+	CALL :deletetempfilesaftermakecab
 	timeout /t 3
 	GoTo :EOF	
 )
@@ -2036,11 +2184,11 @@ echo exit>>"%MONITORINGCMD%"
 start "" /min "%MONITORINGCMD%"
 GoTo :EOF
 
-:DELETETEMPFILESBEFORESTART
+:deletetempfilesbeforestart
 del /q "%DDFDIR1%" "%DDFDIR2%" "%MAKECABTEMPDDF%" "%LOGFILE%" "%LOGFILEERROR%" "%MONITORINGTXT%" "%MONITORINGCMD%" "%TMPBAT%" "%servername1txt%" "%servername2txt%" "%clientname1txt%" "%clientname2txt%" 2>nul >nul
 GoTo :EOF
 
-:DELETETEMPFILESAFTERMAKECAB
+:deletetempfilesaftermakecab
 del /q "%DDFDIR1%" "%MONITORINGCMD%" "%TMPBAT%" "%tempdir%\cab_*" "%tempdir%\inf_*" "%TMPBAT%" 2>nul >nul
 GoTo :EOF
 
@@ -2051,7 +2199,23 @@ GoTo :EOF
 
 :CLEAN-ALL
 :: [ДОРАБОТАТЬ] Закрытие openvpngui.exe и подумать надо ли вообще останавливать службу и закрывать программу перед очисткой
-if "%cleanall%" == "manual" CALL :EchoColor 6 "УДАЛЕНИЕ ПАПКИ %KEY_DIR%"&echo.&echo.
+echo.
+CALL :EchoColor 6 "УДАЛЕНИЕ ПАПКИ СО ВСЕМИ КЛЮЧАМИ И СЕРТИФИКАТАМИ:"&echo.
+CALL :EchoColor 6 "	%KEY_DIR%"&echo.
+echo.
+echo.
+CALL :EchoColor 3 "	ВЫ ДЕЙСТВИТЕЛЬНО ХОТИТЕ УДАЛИТЬ?"&echo.
+CALL :EchoColor 3 "	%KEY_DIR%"&echo.
+echo.
+echo    00 - Да
+echo.
+echo Enter - Нет
+echo.
+CALL :EchoColor 3 "Номер: "
+set "act6="
+set /P "act6="
+echo.
+IF "%act6%" NEQ "00" GoTo :START
 
 CALL :EchoColor 6 "Проверка состояния службы OpenVPNService"&echo.
 if "%service_state%" == "RUNNING" (
@@ -2067,26 +2231,47 @@ if not %type% == Manual (
 ) else (
 	CALL :EchoColor 2 "[V] Тип запуска для службы OpenVPNService [ВРУЧНУЮ]"&echo.
 	)
-echo.
 
 set "event=before_CLEAN-ALL"
-CALL :backup
+CALL :BACKUP
 
+CALL :EchoColor 6 "Проверка наличия папки:"&echo.
+CALL :EchoColor 6 "    %KEY_DIR%"&echo.
 if exist "%KEY_DIR%" (
-	CALL :EchoColor 2 "[V] Папка %KEY_DIR% [НАЙДЕНА]"&echo.&echo.
+	CALL :EchoColor 2 "[V] Папка [НАЙДЕНА]:"&echo.
+	CALL :EchoColor 2 "    %KEY_DIR%"&echo.&echo.
 	rem [Ru] Удалить содержимое папки %KEY_DIR% без вывода запроса
 	rem [En] delete the %KEY_DIR% and any subdirs quietly
-	CALL :EchoColor 6 "Удаление папки %KEY_DIR%"&echo.
+	CALL :EchoColor 6 "Удаление папки:"&echo.
+	CALL :EchoColor 6 "    %KEY_DIR%"&echo.
 	rmdir /s /q "%KEY_DIR%" >nul 2>&1
 	if %ERRORLEVEL% EQU 0 (
-		CALL :EchoColor 2 "[V] Папка %KEY_DIR% [УДАЛЕНА]"&echo.
+		set "keydirstatus=delete"
+		CALL :EchoColor 2 "[V] Папка [УДАЛЕНА]:"&echo.
+		CALL :EchoColor 2 "    %KEY_DIR%"&echo.
 	) else (
-		CALL :EchoColor 4 "[X] Папка %KEY_DIR% [НЕ УДАЛЕНА]"&echo.&echo.&pause
+		CALL :EchoColor 4 "[X] Папка [НЕ УДАЛЕНА]:"&echo.
+		CALL :EchoColor 4 "    %KEY_DIR%"
+		CALL :EchoColor 4 "Попробуйте самостоятельно удалить папку"&echo.&echo.&pause		 
 		)
 ) else (
-	CALL :EchoColor 4 "[X] Папка %KEY_DIR% [НЕ НАЙДЕНА]"&echo.
+	set "keydirstatus=notfind"
+	CALL :EchoColor 4 "[X] Папка [НЕ НАЙДЕНА]:"&echo.
+	CALL :EchoColor 4 "    %KEY_DIR%"&echo.
 	)
-if "%cleanall%" == "manual" CALL :EchoColor 3 "================================================================================"&echo.&set "cleanall=auto"&echo.&pause
+echo.
+CALL :EchoColor 3 "================================================================================"&echo.
+if "%keydirstatus%" == "delete" (
+	CALL :EchoColor 2 "[V] ПАПКА [УДАЛЕНА]:"&echo.
+	CALL :EchoColor 2 "    %KEY_DIR%"&echo.
+) else (
+	CALL :EchoColor 4 "[X] Папка [НЕ НАЙДЕНА]:"&echo.
+	CALL :EchoColor 4 "    %KEY_DIR%"&echo.
+	echo Удаление не требуется
+	)
+CALL :EchoColor 3 "================================================================================"&echo.
+if "%cleanall%" == "manual" set "cleanall=auto"&echo.&pause
+set "cleanall=auto"&echo.
 GoTo :EOF
  
 :EXIT
