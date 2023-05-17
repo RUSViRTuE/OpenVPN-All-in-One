@@ -4,7 +4,7 @@
 :: Этот скрипт должен быть сохранен в кодировке windows-1251
 :: =========================================================
 
-@set "TITLE=OpenVPN-All-in-One by RUSViRTuE v1.2.0 [17.05.2023]"
+@set "TITLE=OpenVPN-All-in-One by RUSViRTuE v1.1.1 [17.05.2023]"
 @echo off
 setlocal enableextensions enabledelayedexpansion
 mode con:cols=130
